@@ -1,0 +1,24 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Backend (Maven/Java)
+backend/target/
+backend/data/*.db
+backend/data/*.trace.db
+*.class
+
+# Frontend (Node/Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+frontend/package-lock.json
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store

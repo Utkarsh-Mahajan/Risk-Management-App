@@ -147,9 +147,11 @@ export function RiskDetailPage() {
                   <span className="flex-grow-1">{m.description}</span>
                   <span className="badge text-bg-primary fw-normal">Eff {m.effectiveness}/5</span>
                   <button
-                    className="btn btn-sm btn-outline-danger"
+                    type="button"
+                    className="btn-close-icon"
                     onClick={() => handleDeleteMitigation(m.id)}
                     title="Remove control"
+                    aria-label="Remove control"
                   >
                     ✕
                   </button>

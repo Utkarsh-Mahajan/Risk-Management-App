@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useUpdateRisk } from '../api/queries'
+import { Modal } from './Modal'
+import { SelectDropdown } from './SelectDropdown'
 import type { ApiError, ClosureReason, Risk, RiskRequest, RiskStatus } from '../api/types'
 
 const statuses: RiskStatus[] = ['OPEN', 'MITIGATING', 'CLOSED']
 const statusLabels: Record<RiskStatus, string> = { OPEN: 'Open', MITIGATING: 'Mitigating', CLOSED: 'Closed' }
 
-const closureReasons: { value: ClosureReason; label: string }[] = [
+const closureReasonOptions: { value: ClosureReason | ''; label: string }[] = [
+  { value: '', label: '— reason —' },
   { value: 'RISK_ACCEPTED', label: 'Risk accepted' },
   { value: 'TRANSFERRED', label: 'Transferred' },
   { value: 'NO_LONGER_APPLICABLE', label: 'No longer applicable' },
@@ -22,6 +25,13 @@ export function StatusSwitcher({ risk }: Props) {
   const [closureReason, setClosureReason] = useState<ClosureReason | ''>('')
   const [closureJustification, setClosureJustification] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  function closeModal() {
+    setClosing(false)
+    setClosureReason('')
+    setClosureJustification('')
+    setError(null)
+  }
 
   function baseRequest(status: RiskStatus, overrides?: Partial<RiskRequest>): RiskRequest {
     return {
@@ -57,13 +67,15 @@ export function StatusSwitcher({ risk }: Props) {
   async function confirmClose(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    if (!closureReason) {
+      setError('Please select a closure reason.')
+      return
+    }
     try {
       await updateRisk.mutateAsync(
         baseRequest('CLOSED', { closureReason: closureReason || null, closureJustification })
       )
-      setClosing(false)
-      setClosureReason('')
-      setClosureJustification('')
+      closeModal()
     } catch (err) {
       setError((err as ApiError).detail ?? 'Failed to close risk.')
     }
@@ -91,40 +103,41 @@ export function StatusSwitcher({ risk }: Props) {
       </div>
 
       {closing && (
-        <form className="card card-body text-start w-100 mt-2" onSubmit={confirmClose}>
-          <p className="small text-muted mb-2">
-            No mitigations are attached — explain why this risk is closing:
-          </p>
-          <select
-            className="form-select form-select-sm mb-2"
-            value={closureReason}
-            onChange={e => setClosureReason(e.target.value as ClosureReason)}
-            required
-          >
-            <option value="">— reason —</option>
-            {closureReasons.map(r => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </select>
-          <textarea
-            className="form-control form-control-sm mb-2"
-            value={closureJustification}
-            onChange={e => setClosureJustification(e.target.value)}
-            placeholder="Justification"
-            required
-          />
-          <div className="d-flex justify-content-end gap-2">
-            <button type="button" className="btn btn-sm btn-outline-secondary" onClick={() => setClosing(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-sm btn-primary" disabled={updateRisk.isPending}>
-              Confirm close
-            </button>
-          </div>
-        </form>
+        <Modal title="Close risk with no mitigations" onClose={closeModal}>
+          <form onSubmit={confirmClose}>
+            <div className="modal-body">
+              <p className="small text-muted mb-3">
+                No mitigations are attached — explain why this risk is closing:
+              </p>
+              <SelectDropdown
+                className="mb-2 w-100"
+                value={closureReason}
+                options={closureReasonOptions}
+                onChange={setClosureReason}
+              />
+              <textarea
+                className="form-control"
+                value={closureJustification}
+                onChange={e => setClosureJustification(e.target.value)}
+                placeholder="Justification"
+                rows={3}
+                required
+              />
+              {error && <div className="text-danger small mt-2">{error}</div>}
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-outline-secondary" onClick={closeModal}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={updateRisk.isPending}>
+                Confirm close
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
 
-      {error && <span className="text-danger small">{error}</span>}
+      {!closing && error && <span className="text-danger small">{error}</span>}
     </div>
   )
 }
